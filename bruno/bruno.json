@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Express MongoDB JWT Auth API",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
