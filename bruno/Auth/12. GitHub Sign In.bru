@@ -1,0 +1,17 @@
+meta {
+  name: 12. GitHub Sign In
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/auth/github
+  body: none
+  auth: none
+}
+
+docs {
+  Open this URL in a browser. GitHub redirects back to the API, which then
+  redirects the browser to the frontend /oauth/callback with the session tokens
+  in the URL hash and in cookies.
+}

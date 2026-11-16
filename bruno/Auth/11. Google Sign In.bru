@@ -1,0 +1,17 @@
+meta {
+  name: 11. Google Sign In
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/auth/google
+  body: none
+  auth: none
+}
+
+docs {
+  Open this URL in a browser. Google redirects back to the API, which then
+  redirects the browser to the frontend /oauth/callback with the session tokens
+  in the URL hash and in cookies.
+}

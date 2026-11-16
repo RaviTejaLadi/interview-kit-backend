@@ -145,4 +145,10 @@ export const env = {
   SMTP_USER: readEnv("SMTP_USER") || "",
   SMTP_PASS: readEnv("SMTP_PASS") || "",
   SMTP_FROM: readEnv("SMTP_FROM") || "",
+  // Public origin of this API. OAuth providers must redirect back to this host.
+  API_PUBLIC_URL: (readEnv("API_PUBLIC_URL") || "").replace(/\/$/, ""),
+  GOOGLE_CLIENT_ID: readEnv("GOOGLE_CLIENT_ID") || "",
+  GOOGLE_CLIENT_SECRET: readEnv("GOOGLE_CLIENT_SECRET") || "",
+  GITHUB_CLIENT_ID: readEnv("GITHUB_CLIENT_ID") || "",
+  GITHUB_CLIENT_SECRET: readEnv("GITHUB_CLIENT_SECRET") || "",
 };

@@ -7,17 +7,23 @@
 import mongoose, { Document, Schema } from "mongoose";
 import bcrypt from "bcryptjs";
 
+export type AuthProvider = "local" | "google" | "github";
+
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   firstName: string;
   lastName: string;
   userName: string;
   email: string;
-  password: string;
-  phoneNumber: string;
-  dob: string;
+  password?: string;
+  phoneNumber?: string;
+  dob?: string;
   bio?: string;
   role: "user" | "admin";
+  provider: AuthProvider;
+  googleId?: string | null;
+  githubId?: string | null;
+  avatar?: string | null;
   refreshToken?: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -58,21 +64,28 @@ const userSchema = new Schema<IUser>(
       index: true,
     },
     // select: false keeps the hash out of normal queries. Login asks for it explicitly.
+    // Google and GitHub accounts can exist without a password.
     password: {
       type: String,
-      required: [true, "Password is required"],
+      required: function (this: IUser) {
+        return !this.googleId && !this.githubId;
+      },
       minlength: [6, "Password must be at least 6 characters"],
       select: false,
     },
     phoneNumber: {
       type: String,
-      required: [true, "Phone Number is required"],
+      required: function (this: IUser) {
+        return !this.googleId && !this.githubId;
+      },
       match: [/^[6-9]\d{9}$/, "Please enter a valid 10-digit phone number"],
     },
     // Stored as text in YYYY-MM-DD so the profile form does not depend on time zones.
     dob: {
       type: String,
-      required: [true, "Date of birth is required"],
+      required: function (this: IUser) {
+        return !this.googleId && !this.githubId;
+      },
       trim: true,
       match: [/^\d{4}-\d{2}-\d{2}$/, "Date of birth must be in YYYY-MM-DD format"],
     },
@@ -90,6 +103,27 @@ const userSchema = new Schema<IUser>(
       enum: ["user", "admin"],
       default: "user",
     },
+    // How the account was first created. A later Google or GitHub link does not replace this.
+    provider: {
+      type: String,
+      enum: ["local", "google", "github"],
+      default: "local",
+    },
+    // Sparse so email-and-password accounts, which have no provider id, can share the index.
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    githubId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    avatar: {
+      type: String,
+      trim: true,
+    },
     // The current refresh token. Logout sets this to null so the old token stops working.
     refreshToken: {
       type: String,
@@ -105,7 +139,7 @@ const userSchema = new Schema<IUser>(
 
 // Hash only when the password is new or changed, so a profile save does not rehash it.
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password") || !this.password) return next();
   const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
   next();
@@ -115,6 +149,7 @@ userSchema.pre("save", async function (next) {
 userSchema.methods.comparePassword = async function (
   candidatePassword: string,
 ): Promise<boolean> {
+  if (!this.password) return false;
   return bcrypt.compare(candidatePassword, this.password);
 };
 

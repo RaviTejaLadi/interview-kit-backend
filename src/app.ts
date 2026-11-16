@@ -14,6 +14,9 @@ import { errorHandler, notFoundHandler } from "./middlewares/error.middleware";
 
 const app = express();
 
+// Render terminates HTTPS in front of the process. This keeps redirect URLs on https.
+app.set("trust proxy", 1);
+
 // Adds safe HTTP headers so browsers reject a few common attacks.
 // The default resource policy is same-origin, which would block the Vercel app from reading this API.
 app.use(

@@ -16,6 +16,13 @@ import {
   refreshAccessToken,
   logout,
 } from "../controllers/auth.controller";
+import {
+  githubCallback,
+  googleCallback,
+  oauthProviders,
+  startGithub,
+  startGoogle,
+} from "../controllers/oauth.controller";
 import { protect } from "../middlewares/auth.middleware";
 import { validate } from "../middlewares/validate.middleware";
 import {
@@ -34,6 +41,12 @@ const router = Router();
 // Open on purpose. A new person has no token yet.
 router.post("/register", validate(registerSchema), register);
 router.post("/login", validate(loginSchema), login);
+// Browser redirects. The callback creates the same session as password login.
+router.get("/oauth/providers", oauthProviders);
+router.get("/google", startGoogle);
+router.get("/google/callback", googleCallback);
+router.get("/github", startGithub);
+router.get("/github/callback", githubCallback);
 // Refresh accepts an existing refresh token, so it is not behind the access-token check.
 router.post("/refresh", validate(refreshTokenSchema), refreshAccessToken);
 // Password reset is public. The code is the proof, not an access token.

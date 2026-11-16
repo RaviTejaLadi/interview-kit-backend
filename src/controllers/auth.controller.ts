@@ -35,9 +35,13 @@ export const toPublicUser = (user: IUser) => ({
   lastName: user.lastName,
   userName: user.userName,
   email: user.email,
-  phoneNumber: user.phoneNumber,
-  dob: user.dob,
+  phoneNumber: user.phoneNumber ?? null,
+  dob: user.dob ?? null,
   bio: user.bio ?? null,
+  avatar: user.avatar ?? null,
+  provider: user.provider ?? "local",
+  google: Boolean(user.googleId),
+  github: Boolean(user.githubId),
   role: user.role,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
@@ -123,6 +127,9 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
   // Password is hidden by default, so login must ask for it.
   const user = await User.findOne({ email }).select("+password");
+  if (user && !user.password && (user.googleId || user.githubId)) {
+    throw new ApiError(401, "This account uses Google or GitHub sign-in. Continue with that provider.");
+  }
   // The same message for a missing user and a bad password avoids revealing which emails exist.
   if (!user || !(await user.comparePassword(password))) {
     throw new ApiError(401, "The email or password you entered is incorrect.");
@@ -210,6 +217,10 @@ export const changePassword = asyncHandler(
     const user = await User.findById(req.user?.userId).select("+password");
     if (!user) {
       throw new ApiError(404, "The requested user could not be found.");
+    }
+
+    if (!user.password) {
+      throw new ApiError(400, "This account uses Google or GitHub sign-in and does not have a password yet.");
     }
 
     const isMatch = await user.comparePassword(currentPassword);
