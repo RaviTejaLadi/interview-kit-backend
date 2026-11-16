@@ -383,10 +383,8 @@ export const forgotPassword = asyncHandler(async (req: Request, res: Response) =
     try {
       await sendPasswordResetOtp(email, otp);
     } catch (error) {
-      console.error(
-        "Password reset email failed",
-        error instanceof Error ? error.name : "Error"
-      );
+      const reason = error instanceof Error ? error.message : "Unknown mail error";
+      console.error("Password reset email failed:", reason);
       await PasswordReset.updateOne(
         { email },
         { otpHash: null, otpExpiresAt: null, lastSentAt: null }

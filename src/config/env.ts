@@ -142,7 +142,9 @@ export const env = {
   GEMINI_MAX_MESSAGE_CHARS: readInt("GEMINI_MAX_MESSAGE_CHARS", 2000, 100, 8000),
   // Caps the model reply so one turn cannot run away in length or cost.
   GEMINI_MAX_OUTPUT_TOKENS: readInt("GEMINI_MAX_OUTPUT_TOKENS", 1024, 64, 8192),
-  // Optional. Password reset emails are sent only when all of these are set.
+  // Optional. Brevo HTTPS API key (xkeysib-...). Required on Render free, which blocks SMTP.
+  BREVO_API_KEY: readEnv("BREVO_API_KEY") || "",
+  // Optional. Used when BREVO_API_KEY is unset. SMTP_USER is the Brevo SMTP login, not the From address.
   SMTP_HOST: readEnv("SMTP_HOST") || "",
   SMTP_PORT: parseInt(readEnv("SMTP_PORT") || "587", 10),
   SMTP_USER: readEnv("SMTP_USER") || "",
