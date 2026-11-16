@@ -6,6 +6,7 @@
 import { Router, Request, Response } from "express";
 import adminRoutes from "./admin.routes";
 import authRoutes from "./auth.routes";
+import chatRoutes from "./chat.routes";
 import feedbackRoutes from "./feedback.routes";
 import { env } from "../config/env";
 import { ResponseStatus, sendResponse } from "../types/http-response";
@@ -32,5 +33,7 @@ router.use("/auth", authRoutes);
 router.use("/admin", adminRoutes);
 // The feedback form: submit, list, read, and delete.
 router.use("/feedback", feedbackRoutes);
+// Gemini chats for the signed-in user, with per-account limits.
+router.use("/chat", chatRoutes);
 
 export default router;

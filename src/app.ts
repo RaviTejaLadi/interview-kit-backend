@@ -37,7 +37,7 @@ app.use(cookieParser());
 app.get("/", healthCheck);
 app.get("/health", healthCheck);
 
-// Every feature route is mounted here: auth, admin, and feedback.
+// Every feature route is mounted here: auth, admin, feedback, and chat.
 app.use("/api/v1", routes);
 
 // These must be last. Unknown URLs and thrown errors become JSON responses.

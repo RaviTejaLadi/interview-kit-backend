@@ -1,0 +1,15 @@
+meta {
+  name: 4. Get Chat
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/chat/{{chatId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

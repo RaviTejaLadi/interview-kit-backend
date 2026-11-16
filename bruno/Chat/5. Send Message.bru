@@ -1,0 +1,25 @@
+meta {
+  name: 5. Send Message
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/chat/{{chatId}}/messages
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "message": "Give me one follow-up interview question about that answer."
+  }
+}

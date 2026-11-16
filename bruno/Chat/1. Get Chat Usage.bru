@@ -1,0 +1,15 @@
+meta {
+  name: 1. Get Chat Usage
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/chat/usage
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

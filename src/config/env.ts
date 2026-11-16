@@ -82,6 +82,14 @@ if (isProduction && jwtAccessSecret === jwtRefreshSecret) {
   throw new Error("JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different.");
 }
 
+// Chat quotas are numbers. A missing or unusable value keeps the built-in default.
+const readInt = (name: string, fallback: number, min: number, max: number): number => {
+  const raw = readEnv(name);
+  const parsed = raw ? Number.parseInt(raw, 10) : fallback;
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+};
+
 export const env = {
   NODE_ENV: nodeEnv,
   isProduction,
@@ -97,4 +105,18 @@ export const env = {
   // Access tokens expire sooner. Refresh tokens let a client stay logged in.
   JWT_ACCESS_EXPIRES_IN: readEnv("JWT_ACCESS_EXPIRES_IN") || "24h",
   JWT_REFRESH_EXPIRES_IN: readEnv("JWT_REFRESH_EXPIRES_IN") || "7d",
+  // Empty means the chat routes answer 503. The rest of the API still starts.
+  GEMINI_API_KEY: readEnv("GEMINI_API_KEY") || "",
+  // gemini-flash-latest often returns 503 under load. The lite alias stays on the same API and answers.
+  GEMINI_MODEL: readEnv("GEMINI_MODEL") || "gemini-flash-lite-latest",
+  // How many saved conversations one account may keep at once.
+  GEMINI_MAX_CHATS_PER_USER: readInt("GEMINI_MAX_CHATS_PER_USER", 5, 1, 50),
+  // How many of the user's own messages one conversation may contain.
+  GEMINI_MAX_MESSAGES_PER_CHAT: readInt("GEMINI_MAX_MESSAGES_PER_CHAT", 20, 1, 100),
+  // How many user messages one account may send between 00:00 and 24:00 UTC.
+  GEMINI_DAILY_MESSAGE_LIMIT: readInt("GEMINI_DAILY_MESSAGE_LIMIT", 30, 1, 500),
+  // Stops a single request from sending a very long prompt.
+  GEMINI_MAX_MESSAGE_CHARS: readInt("GEMINI_MAX_MESSAGE_CHARS", 2000, 100, 8000),
+  // Caps the model reply so one turn cannot run away in length or cost.
+  GEMINI_MAX_OUTPUT_TOKENS: readInt("GEMINI_MAX_OUTPUT_TOKENS", 1024, 64, 8192),
 };
