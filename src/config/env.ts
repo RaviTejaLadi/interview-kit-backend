@@ -95,7 +95,10 @@ const readClientOrigins = (): string[] => {
     .filter((origin) => origin && !PLACEHOLDER_CLIENT_URLS.has(origin));
 
   const origins = new Set<string>(configured);
-  if (!isProduction) origins.add("http://localhost:1010");
+  if (!isProduction) {
+    origins.add("http://localhost:1010");
+    origins.add("http://127.0.0.1:1010");
+  }
   origins.add(PRODUCTION_CLIENT_URL);
   return [...origins];
 };

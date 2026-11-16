@@ -23,7 +23,10 @@ import { setTokenCookies } from "./auth.controller";
 const callbackPath = (provider: OAuthProviderName): string =>
   `/api/v1/auth/${provider}/callback`;
 
+// Google treats localhost and 127.0.0.1 as different callbacks.
+// The local provider apps are registered on 127.0.0.1.
 export const publicApiBase = (req: Request): string => {
+  if (!env.isProduction) return `http://127.0.0.1:${env.PORT}`;
   if (env.API_PUBLIC_URL) return env.API_PUBLIC_URL;
   return `${req.protocol}://${req.get("host")}`;
 };
@@ -31,10 +34,21 @@ export const publicApiBase = (req: Request): string => {
 const redirectUri = (req: Request, provider: OAuthProviderName): string =>
   `${publicApiBase(req)}${callbackPath(provider)}`;
 
-const frontendCallback = (): URL => new URL("/oauth/callback", env.CLIENT_URL);
+const allowedReturnOrigin = (value: unknown): string => {
+  if (typeof value !== "string" || !value.trim()) return env.CLIENT_URL;
+  try {
+    const origin = new URL(value).origin;
+    if (env.CLIENT_ORIGINS.includes(origin)) return origin;
+  } catch {
+    return env.CLIENT_URL;
+  }
+  return env.CLIENT_URL;
+};
 
-const redirectOAuthError = (res: Response, message: string) => {
-  const target = frontendCallback();
+const frontendCallback = (origin = env.CLIENT_URL): URL => new URL("/oauth/callback", origin);
+
+const redirectOAuthError = (res: Response, message: string, origin = env.CLIENT_URL) => {
+  const target = frontendCallback(origin);
   target.searchParams.set("error", message);
   res.redirect(target.toString());
 };
@@ -93,7 +107,7 @@ const findOrCreateUser = async (profile: OAuthProfile): Promise<IUser> => {
   return user;
 };
 
-const finishLogin = async (res: Response, user: IUser) => {
+const finishLogin = async (res: Response, user: IUser, returnTo: string) => {
   const payload: JwtPayload = {
     userId: user._id.toString(),
     email: user.email,
@@ -105,7 +119,7 @@ const finishLogin = async (res: Response, user: IUser) => {
   await user.save({ validateBeforeSave: false });
   setTokenCookies(res, accessToken, refreshToken);
 
-  const target = frontendCallback();
+  const target = frontendCallback(returnTo);
   const hash = new URLSearchParams({ accessToken, refreshToken });
   target.hash = hash.toString();
   res.redirect(target.toString());
@@ -137,7 +151,8 @@ const startOAuth = (provider: OAuthProviderName, buildUrl: (redirectUri: string,
     if (!providerReady(provider)) {
       throw new ApiError(503, `${provider === "google" ? "Google" : "GitHub"} sign-in is not configured.`);
     }
-    const state = signOAuthState(provider);
+    const returnTo = allowedReturnOrigin(req.query.returnTo);
+    const state = signOAuthState(provider, returnTo);
     res.redirect(buildUrl(redirectUri(req, provider), state));
   });
 
@@ -152,6 +167,7 @@ const handleCallback = (
   loadProfile: (code: string, redirectUri: string) => Promise<OAuthProfile>
 ) =>
   asyncHandler(async (req: Request, res: Response) => {
+    let returnTo = env.CLIENT_URL;
     try {
       if (!providerReady(provider)) {
         throw new ApiError(503, `${provider === "google" ? "Google" : "GitHub"} sign-in is not configured.`);
@@ -164,16 +180,16 @@ const handleCallback = (
       if (!code || !state) {
         throw new ApiError(400, "The sign-in response was incomplete. Please try again.");
       }
-      verifyOAuthState(state, provider);
+      returnTo = allowedReturnOrigin(verifyOAuthState(state, provider).returnTo);
       const profile = await loadProfile(code, redirectUri(req, provider));
       const user = await findOrCreateUser(profile);
-      await finishLogin(res, user);
+      await finishLogin(res, user, returnTo);
     } catch (error) {
       const message =
         error instanceof ApiError
           ? error.message
           : `${provider === "google" ? "Google" : "GitHub"} sign-in could not be completed. Please try again.`;
-      redirectOAuthError(res, message);
+      redirectOAuthError(res, message, returnTo);
     }
   });
 

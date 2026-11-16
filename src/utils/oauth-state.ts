@@ -8,18 +8,25 @@ import { ApiError } from "./ApiError";
 
 export type OAuthProviderName = "google" | "github";
 
-export const signOAuthState = (provider: OAuthProviderName): string =>
-  jwt.sign({ purpose: "oauth", provider }, env.JWT_ACCESS_SECRET, { expiresIn: "10m" });
+export const signOAuthState = (provider: OAuthProviderName, returnTo: string): string =>
+  jwt.sign({ purpose: "oauth", provider, returnTo }, env.JWT_ACCESS_SECRET, { expiresIn: "10m" });
 
-export const verifyOAuthState = (state: string, provider: OAuthProviderName): void => {
+export const verifyOAuthState = (
+  state: string,
+  provider: OAuthProviderName
+): { returnTo: string } => {
   try {
     const decoded = jwt.verify(state, env.JWT_ACCESS_SECRET) as {
       purpose?: string;
       provider?: string;
+      returnTo?: string;
     };
     if (decoded.purpose !== "oauth" || decoded.provider !== provider) {
       throw new Error("mismatch");
     }
+    return {
+      returnTo: typeof decoded.returnTo === "string" ? decoded.returnTo : env.CLIENT_URL,
+    };
   } catch (error) {
     if (error instanceof ApiError) throw error;
     const name = error instanceof Error ? error.name : "";
