@@ -140,6 +140,58 @@ export const changePasswordSchema = z.object({
   }),
 });
 
+const emailSchema = z
+  .string({
+    required_error: "Email address is required.",
+    invalid_type_error: "Email address must be text.",
+  })
+  .trim()
+  .email("Please enter a valid email address.");
+
+const newPasswordSchema = z
+  .string({
+    required_error: "New password is required.",
+    invalid_type_error: "New password must be text.",
+  })
+  .min(6, "New password must be at least 6 characters.")
+  .max(100, "New password cannot exceed 100 characters.");
+
+// Asks for a reset code. The response does not say whether the email is registered.
+export const forgotPasswordSchema = z.object({
+  body: z.object({
+    email: emailSchema,
+  }),
+});
+
+// Checks the 6-digit code from the email before a new password is accepted.
+export const verifyOtpSchema = z.object({
+  body: z.object({
+    email: emailSchema,
+    otp: z
+      .string({
+        required_error: "The code is required.",
+        invalid_type_error: "The code must be text.",
+      })
+      .trim()
+      .regex(/^\d{6}$/, "The code must be 6 digits."),
+  }),
+});
+
+// Uses the token returned by verify-otp. The code itself is not sent again.
+export const resetPasswordSchema = z.object({
+  body: z.object({
+    email: emailSchema,
+    resetToken: z
+      .string({
+        required_error: "Reset token is required.",
+        invalid_type_error: "Reset token must be text.",
+      })
+      .trim()
+      .min(32, "Reset token is invalid."),
+    newPassword: newPasswordSchema,
+  }),
+});
+
 // The refresh token may arrive in the JSON body or in the cookie, so the body field is optional.
 export const refreshTokenSchema = z.object({
   body: z.object({

@@ -8,7 +8,19 @@ import {
   JwtPayload,
 } from "../utils/jwt";
 import { env } from "../config/env";
+import { PasswordReset } from "../models/password-reset.model";
+import { isMailConfigured, sendPasswordResetOtp } from "../services/mail.service";
 import { ResponseStatus, sendResponse } from "../types/http-response";
+import {
+  OTP_MAX_ATTEMPTS,
+  OTP_RESEND_COOLDOWN_MS,
+  OTP_TTL_MS,
+  RESET_TOKEN_TTL_MS,
+  generateOtp,
+  generateResetToken,
+  hashSecret,
+  secretsMatch,
+} from "../utils/otp";
 
 /**
  * Account actions.
@@ -280,5 +292,185 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
     data: null,
     status: ResponseStatus.SUCCESS,
     message: "You have been logged out successfully.",
+  });
+});
+
+const RESET_REQUEST_MESSAGE =
+  "If an account exists for this email, a reset code has been sent.";
+
+const normalizeEmail = (email: string): string => email.trim().toLowerCase();
+
+const isDuplicateKey = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  (error as { code?: number }).code === 11000;
+
+// Upsert by email. Two requests at the same moment can both try to insert the row.
+const savePasswordReset = async (
+  email: string,
+  update: Record<string, unknown>
+) => {
+  try {
+    await PasswordReset.findOneAndUpdate({ email }, update, { upsert: true });
+  } catch (error) {
+    if (!isDuplicateKey(error)) throw error;
+    await PasswordReset.updateOne({ email }, update);
+  }
+};
+
+// Sends a 6-digit code. Unknown emails get the same success message as known ones.
+// POST /api/v1/auth/forgot-password
+export const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
+  const email = normalizeEmail(req.body.email);
+  const now = Date.now();
+
+  if (env.isProduction && !isMailConfigured()) {
+    throw new ApiError(503, "Password reset email is not available right now.");
+  }
+
+  const existing = await PasswordReset.findOne({ email });
+  if (
+    existing?.lastSentAt &&
+    now - existing.lastSentAt.getTime() < OTP_RESEND_COOLDOWN_MS
+  ) {
+    throw new ApiError(429, "Please wait a minute before requesting another code.");
+  }
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    await savePasswordReset(email, {
+      email,
+      lastSentAt: new Date(now),
+      otpHash: null,
+      otpExpiresAt: null,
+      attempts: 0,
+      resetTokenHash: null,
+      resetTokenExpiresAt: null,
+    });
+    sendResponse(res, 200, {
+      data: null,
+      status: ResponseStatus.SUCCESS,
+      message: RESET_REQUEST_MESSAGE,
+    });
+    return;
+  }
+
+  const otp = generateOtp();
+  await savePasswordReset(email, {
+    email,
+    otpHash: hashSecret(`${email}:${otp}`),
+    otpExpiresAt: new Date(now + OTP_TTL_MS),
+    attempts: 0,
+    lastSentAt: new Date(now),
+    resetTokenHash: null,
+    resetTokenExpiresAt: null,
+  });
+
+  const mailReady = isMailConfigured();
+  if (mailReady) {
+    try {
+      await sendPasswordResetOtp(email, otp);
+    } catch (error) {
+      console.error(
+        "Password reset email failed",
+        error instanceof Error ? error.name : "Error"
+      );
+      await PasswordReset.updateOne(
+        { email },
+        { otpHash: null, otpExpiresAt: null, lastSentAt: null }
+      );
+      throw new ApiError(502, "The reset code could not be sent. Please try again.");
+    }
+  }
+
+  // Local Bruno can read the code when SMTP is not set. Production never includes it.
+  const exposeOtp = !env.isProduction && !mailReady;
+  sendResponse(res, 200, {
+    data: exposeOtp ? { otp } : null,
+    status: ResponseStatus.SUCCESS,
+    message: exposeOtp
+      ? "Email delivery is not configured, so the reset code is included in this response."
+      : RESET_REQUEST_MESSAGE,
+  });
+});
+
+// Checks the code and returns a short-lived reset token for the password form.
+// POST /api/v1/auth/verify-otp
+export const verifyOtp = asyncHandler(async (req: Request, res: Response) => {
+  const email = normalizeEmail(req.body.email);
+  const otp = String(req.body.otp).trim();
+  const record = await PasswordReset.findOne({ email });
+  const invalid = new ApiError(400, "The code is invalid or has expired. Request a new one.");
+
+  if (!record?.otpHash || !record.otpExpiresAt || record.otpExpiresAt.getTime() < Date.now()) {
+    throw invalid;
+  }
+
+  if (record.attempts >= OTP_MAX_ATTEMPTS) {
+    throw new ApiError(429, "Too many incorrect codes. Request a new one.");
+  }
+
+  if (!secretsMatch(`${email}:${otp}`, record.otpHash)) {
+    await PasswordReset.updateOne({ email }, { $inc: { attempts: 1 } });
+    throw invalid;
+  }
+
+  const resetToken = generateResetToken();
+  record.otpHash = null;
+  record.otpExpiresAt = null;
+  record.attempts = 0;
+  record.resetTokenHash = hashSecret(`${email}:${resetToken}`);
+  record.resetTokenExpiresAt = new Date(Date.now() + RESET_TOKEN_TTL_MS);
+  await record.save();
+
+  sendResponse(res, 200, {
+    data: {
+      resetToken,
+    },
+    status: ResponseStatus.SUCCESS,
+    message: "The code has been verified. You can now choose a new password.",
+  });
+});
+
+// Replaces the password after the code has been verified. Older sessions stop working.
+// POST /api/v1/auth/reset-password
+export const resetPassword = asyncHandler(async (req: Request, res: Response) => {
+  const email = normalizeEmail(req.body.email);
+  const resetToken = String(req.body.resetToken).trim();
+  const newPassword = String(req.body.newPassword);
+  const record = await PasswordReset.findOne({ email });
+  const invalid = new ApiError(
+    400,
+    "This reset session is invalid or has expired. Verify the code again."
+  );
+
+  if (
+    !record?.resetTokenHash ||
+    !record.resetTokenExpiresAt ||
+    record.resetTokenExpiresAt.getTime() < Date.now() ||
+    !secretsMatch(`${email}:${resetToken}`, record.resetTokenHash)
+  ) {
+    throw invalid;
+  }
+
+  const user = await User.findOne({ email }).select("+password");
+  if (!user) {
+    throw invalid;
+  }
+
+  if (await user.comparePassword(newPassword)) {
+    throw new ApiError(400, "The new password must be different from the current password.");
+  }
+
+  user.password = newPassword;
+  user.refreshToken = null;
+  await user.save();
+  await record.deleteOne();
+
+  sendResponse(res, 200, {
+    data: null,
+    status: ResponseStatus.SUCCESS,
+    message: "Your password has been updated. Please log in with the new password.",
   });
 });

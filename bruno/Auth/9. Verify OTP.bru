@@ -1,0 +1,28 @@
+meta {
+  name: 9. Verify OTP
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/auth/verify-otp
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "ravi@example.com",
+    "otp": "{{resetOtp}}"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 && res.body && res.body.data && res.body.data.resetToken) {
+    bru.setEnvVar("resetToken", res.body.data.resetToken);
+  }
+}

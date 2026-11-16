@@ -139,4 +139,10 @@ export const env = {
   GEMINI_MAX_MESSAGE_CHARS: readInt("GEMINI_MAX_MESSAGE_CHARS", 2000, 100, 8000),
   // Caps the model reply so one turn cannot run away in length or cost.
   GEMINI_MAX_OUTPUT_TOKENS: readInt("GEMINI_MAX_OUTPUT_TOKENS", 1024, 64, 8192),
+  // Optional. Password reset emails are sent only when all of these are set.
+  SMTP_HOST: readEnv("SMTP_HOST") || "",
+  SMTP_PORT: parseInt(readEnv("SMTP_PORT") || "587", 10),
+  SMTP_USER: readEnv("SMTP_USER") || "",
+  SMTP_PASS: readEnv("SMTP_PASS") || "",
+  SMTP_FROM: readEnv("SMTP_FROM") || "",
 };

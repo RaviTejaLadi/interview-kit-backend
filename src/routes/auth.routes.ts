@@ -7,6 +7,9 @@ import { Router } from "express";
 import {
   register,
   login,
+  forgotPassword,
+  verifyOtp,
+  resetPassword,
   getMe,
   updateProfile,
   changePassword,
@@ -21,6 +24,9 @@ import {
   updateProfileSchema,
   changePasswordSchema,
   refreshTokenSchema,
+  forgotPasswordSchema,
+  verifyOtpSchema,
+  resetPasswordSchema,
 } from "../schemas/auth.schema";
 
 const router = Router();
@@ -30,6 +36,10 @@ router.post("/register", validate(registerSchema), register);
 router.post("/login", validate(loginSchema), login);
 // Refresh accepts an existing refresh token, so it is not behind the access-token check.
 router.post("/refresh", validate(refreshTokenSchema), refreshAccessToken);
+// Password reset is public. The code is the proof, not an access token.
+router.post("/forgot-password", validate(forgotPasswordSchema), forgotPassword);
+router.post("/verify-otp", validate(verifyOtpSchema), verifyOtp);
+router.post("/reset-password", validate(resetPasswordSchema), resetPassword);
 
 // Everything below needs the access token from login or register.
 router.get("/me", protect, getMe);
