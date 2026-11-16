@@ -6,9 +6,7 @@ const startServer = async () => {
   await connectDB();
 
   const server = app.listen(env.PORT, () => {
-    console.log(
-      `Server running in ${env.NODE_ENV} mode on http://localhost:${env.PORT}`
-    );
+    console.log(`Server running in ${env.NODE_ENV} mode on port ${env.PORT}`);
   });
 
   process.on("unhandledRejection", (err: Error) => {
