@@ -18,8 +18,11 @@ import {
 export const createAdminSchema = registerSchema;
 
 const objectIdSchema = z
-  .string()
-  .regex(/^[a-fA-F0-9]{24}$/, "Invalid user id");
+  .string({
+    required_error: "User id is required.",
+    invalid_type_error: "User id must be text.",
+  })
+  .regex(/^[a-fA-F0-9]{24}$/, "Please provide a valid user id.");
 
 // Used by get and delete, which only need the user id from the URL.
 export const adminUserIdSchema = z.object({
@@ -41,9 +44,13 @@ export const adminUpdateUserSchema = z.object({
       phoneNumber: phoneNumberSchema.optional(),
       dob: dobSchema.optional(),
       bio: bioSchema.optional(),
-      role: z.enum(["user", "admin"]).optional(),
+      role: z
+        .enum(["user", "admin"], {
+          errorMap: () => ({ message: "Role must be either user or admin." }),
+        })
+        .optional(),
     })
     .refine((data) => Object.values(data).some((value) => value !== undefined), {
-      message: "At least one field is required",
+      message: "At least one field is required to update this user.",
     }),
 });

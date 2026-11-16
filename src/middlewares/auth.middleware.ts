@@ -29,14 +29,14 @@ export const protect = async (
   try {
     const token = readToken(req);
     if (!token) {
-      return next(new ApiError(401, "Authentication required. Please log in."));
+      return next(new ApiError(401, "Please log in to continue."));
     }
 
     const decoded = verifyAccessToken(token);
     // Read the role from the database so a demotion takes effect before the token expires.
     const user = await User.findById(decoded.userId).select("role");
     if (!user) {
-      return next(new ApiError(401, "User no longer exists"));
+      return next(new ApiError(401, "This account no longer exists. Please log in again."));
     }
 
     req.user = {
@@ -55,7 +55,7 @@ export const protect = async (
       name === "TokenExpiredError" ||
       name === "NotBeforeError"
     ) {
-      return next(new ApiError(401, "Invalid or expired access token"));
+      return next(new ApiError(401, "The access token is invalid or has expired. Please log in again."));
     }
 
     next(error);
@@ -77,7 +77,7 @@ export const authorize = (...roles: string[]) => {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user || !roles.includes(req.user.role)) {
       return next(
-        new ApiError(403, "You do not have permission to perform this action")
+        new ApiError(403, "You do not have permission to perform this action.")
       );
     }
     next();

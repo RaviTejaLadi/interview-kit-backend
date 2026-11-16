@@ -8,16 +8,19 @@ import adminRoutes from "./admin.routes";
 import authRoutes from "./auth.routes";
 import feedbackRoutes from "./feedback.routes";
 import { env } from "../config/env";
+import { ResponseStatus, sendResponse } from "../types/http-response";
 
 const router = Router();
 
 // Lets Bruno and hosting checks see that the process is up.
 export const healthCheck = (_req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    message: "API is running smoothly",
-    environment: env.CLIENT_URL,
-    timestamp: new Date().toISOString(),
+  sendResponse(res, 200, {
+    data: {
+      environment: env.CLIENT_URL,
+      timestamp: new Date().toISOString(),
+    },
+    status: ResponseStatus.SUCCESS,
+    message: "The API is running successfully.",
   });
 };
 

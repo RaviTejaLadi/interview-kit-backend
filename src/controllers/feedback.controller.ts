@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import Feedback, { IFeedback } from "../models/feedback.model";
 import { ApiError, asyncHandler } from "../utils/ApiError";
+import { ResponseStatus, sendResponse } from "../types/http-response";
 
 /**
  * Feedback form actions.
@@ -22,7 +23,7 @@ export const toPublicFeedback = (feedback: IFeedback) => ({
 // POST /api/v1/feedback
 export const createFeedback = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
-    throw new ApiError(401, "Authentication required. Please log in.");
+    throw new ApiError(401, "Please log in to continue.");
   }
 
   const feedback = await Feedback.create({
@@ -31,12 +32,12 @@ export const createFeedback = asyncHandler(async (req: Request, res: Response) =
     description: req.body.description,
   });
 
-  res.status(201).json({
-    success: true,
-    message: "Feedback submitted successfully",
+  sendResponse(res, 201, {
     data: {
       feedback: toPublicFeedback(feedback),
     },
+    status: ResponseStatus.SUCCESS,
+    message: "Your feedback has been submitted successfully.",
   });
 });
 
@@ -46,22 +47,24 @@ export const getFeedbacks = asyncHandler(async (req: Request, res: Response) => 
   const filter = req.user?.role === "admin" ? {} : { user: req.user?.userId };
   const feedbacks = await Feedback.find(filter).sort({ createdAt: -1 });
 
-  res.status(200).json({
-    success: true,
+  sendResponse(res, 200, {
     data: {
       feedbacks: feedbacks.map(toPublicFeedback),
     },
+    status: ResponseStatus.SUCCESS,
+    message: "Feedback has been retrieved successfully.",
   });
 });
 
 // req.feedback was loaded and permission-checked by loadFeedback.
 // GET /api/v1/feedback/:id
 export const getFeedback = asyncHandler(async (req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
+  sendResponse(res, 200, {
     data: {
       feedback: toPublicFeedback(req.feedback as IFeedback),
     },
+    status: ResponseStatus.SUCCESS,
+    message: "The feedback has been retrieved successfully.",
   });
 });
 
@@ -70,8 +73,9 @@ export const getFeedback = asyncHandler(async (req: Request, res: Response) => {
 export const deleteFeedback = asyncHandler(async (req: Request, res: Response) => {
   await req.feedback?.deleteOne();
 
-  res.status(200).json({
-    success: true,
-    message: "Feedback deleted successfully",
+  sendResponse(res, 200, {
+    data: null,
+    status: ResponseStatus.SUCCESS,
+    message: "The feedback has been deleted successfully.",
   });
 });

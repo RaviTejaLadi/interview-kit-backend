@@ -8,6 +8,7 @@ import {
   JwtPayload,
 } from "../utils/jwt";
 import { env } from "../config/env";
+import { ResponseStatus, sendResponse } from "../types/http-response";
 
 /**
  * Account actions.
@@ -62,7 +63,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   // One email can belong to only one account.
   const existingUser = await User.findOne({ email });
   if (existingUser) {
-    throw new ApiError(409, "Email is already registered");
+    throw new ApiError(409, "This email address is already registered. Please use a different email address.");
   }
 
   const user = await User.create({
@@ -91,14 +92,14 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 
   setTokenCookies(res, accessToken, refreshToken);
 
-  res.status(201).json({
-    success: true,
-    message: "User registered successfully",
+  sendResponse(res, 201, {
     data: {
       user: toPublicUser(user),
       accessToken,
       refreshToken,
     },
+    status: ResponseStatus.SUCCESS,
+    message: "Your account has been created and you are now logged in.",
   });
 });
 
@@ -111,7 +112,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   const user = await User.findOne({ email }).select("+password");
   // The same message for a missing user and a bad password avoids revealing which emails exist.
   if (!user || !(await user.comparePassword(password))) {
-    throw new ApiError(401, "Invalid email or password");
+    throw new ApiError(401, "The email or password you entered is incorrect.");
   }
 
   const payload: JwtPayload = {
@@ -128,14 +129,14 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
   setTokenCookies(res, accessToken, refreshToken);
 
-  res.status(200).json({
-    success: true,
-    message: "Logged in successfully",
+  sendResponse(res, 200, {
     data: {
       user: toPublicUser(user),
       accessToken,
       refreshToken,
     },
+    status: ResponseStatus.SUCCESS,
+    message: "You have logged in successfully.",
   });
 });
 
@@ -144,14 +145,15 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 export const getMe = asyncHandler(async (req: Request, res: Response) => {
   const user = await User.findById(req.user?.userId);
   if (!user) {
-    throw new ApiError(404, "User not found");
+    throw new ApiError(404, "The requested user could not be found.");
   }
 
-  res.status(200).json({
-    success: true,
+  sendResponse(res, 200, {
     data: {
       user: toPublicUser(user),
     },
+    status: ResponseStatus.SUCCESS,
+    message: "Your profile has been retrieved successfully.",
   });
 });
 
@@ -173,15 +175,15 @@ export const updateProfile = asyncHandler(
     });
 
     if (!user) {
-      throw new ApiError(404, "User not found");
+      throw new ApiError(404, "The requested user could not be found.");
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Profile updated successfully",
+    sendResponse(res, 200, {
       data: {
         user: toPublicUser(user),
       },
+      status: ResponseStatus.SUCCESS,
+      message: "Your profile has been updated successfully.",
     });
   }
 );
@@ -194,20 +196,21 @@ export const changePassword = asyncHandler(
 
     const user = await User.findById(req.user?.userId).select("+password");
     if (!user) {
-      throw new ApiError(404, "User not found");
+      throw new ApiError(404, "The requested user could not be found.");
     }
 
     const isMatch = await user.comparePassword(currentPassword);
     if (!isMatch) {
-      throw new ApiError(401, "Current password is incorrect");
+      throw new ApiError(401, "The current password you entered is incorrect.");
     }
 
     user.password = newPassword;
     await user.save();
 
-    res.status(200).json({
-      success: true,
-      message: "Password updated successfully",
+    sendResponse(res, 200, {
+      data: null,
+      status: ResponseStatus.SUCCESS,
+      message: "Your password has been updated successfully.",
     });
   }
 );
@@ -221,20 +224,20 @@ export const refreshAccessToken = asyncHandler(
       req.body.refreshToken || req.cookies?.refreshToken;
 
     if (!incomingRefreshToken) {
-      throw new ApiError(401, "Refresh token is required");
+      throw new ApiError(401, "A refresh token is required to continue this session.");
     }
 
     let decoded: JwtPayload;
     try {
       decoded = verifyRefreshToken(incomingRefreshToken);
     } catch {
-      throw new ApiError(401, "Invalid or expired refresh token");
+      throw new ApiError(401, "The refresh token is invalid or has expired. Please log in again.");
     }
 
     const user = await User.findById(decoded.userId).select("+refreshToken");
     // A valid signature is not enough. It must still be the token saved for this user.
     if (!user || user.refreshToken !== incomingRefreshToken) {
-      throw new ApiError(401, "Refresh token is revoked or invalid");
+      throw new ApiError(401, "The refresh token is no longer valid. Please log in again.");
     }
 
     const payload: JwtPayload = {
@@ -251,13 +254,13 @@ export const refreshAccessToken = asyncHandler(
 
     setTokenCookies(res, newAccessToken, newRefreshToken);
 
-    res.status(200).json({
-      success: true,
-      message: "Token refreshed successfully",
+    sendResponse(res, 200, {
       data: {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
       },
+      status: ResponseStatus.SUCCESS,
+      message: "Your session tokens have been refreshed successfully.",
     });
   }
 );
@@ -272,8 +275,9 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
   res.clearCookie("accessToken");
   res.clearCookie("refreshToken");
 
-  res.status(200).json({
-    success: true,
-    message: "Logged out successfully",
+  sendResponse(res, 200, {
+    data: null,
+    status: ResponseStatus.SUCCESS,
+    message: "You have been logged out successfully.",
   });
 });

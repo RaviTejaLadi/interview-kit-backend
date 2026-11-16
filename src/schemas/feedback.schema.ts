@@ -6,17 +6,23 @@ import { z } from "zod";
 
 // The short subject of the form.
 const titleSchema = z
-  .string()
+  .string({
+    required_error: "Title is required.",
+    invalid_type_error: "Title must be text.",
+  })
   .trim()
-  .min(3, "Title must be at least 3 characters")
-  .max(60, "Title cannot exceed 60 characters");
+  .min(3, "Title must be at least 3 characters.")
+  .max(60, "Title cannot exceed 60 characters.");
 
 // The longer note. A one-character note is rejected.
 const descriptionSchema = z
-  .string()
+  .string({
+    required_error: "Description is required.",
+    invalid_type_error: "Description must be text.",
+  })
   .trim()
-  .min(2, "Description must be at least 2 characters long")
-  .max(250, "Description cannot exceed 250 characters");
+  .min(2, "Description must be at least 2 characters.")
+  .max(250, "Description cannot exceed 250 characters.");
 
 export const createFeedbackSchema = z.object({
   body: z.object({
@@ -34,7 +40,10 @@ export const createFeedbackSchema = z.object({
 export const feedbackIdSchema = z.object({
   params: z.object({
     id: z
-      .string()
-      .regex(/^[a-fA-F0-9]{24}$/, "Invalid feedback id"),
+      .string({
+        required_error: "Feedback id is required.",
+        invalid_type_error: "Feedback id must be text.",
+      })
+      .regex(/^[a-fA-F0-9]{24}$/, "Please provide a valid feedback id."),
   }),
 });

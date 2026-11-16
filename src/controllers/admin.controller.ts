@@ -5,6 +5,7 @@ import Feedback from "../models/feedback.model";
 import { User } from "../models/user.model";
 import { ApiError, asyncHandler } from "../utils/ApiError";
 import { JwtPayload, signAccessToken, signRefreshToken } from "../utils/jwt";
+import { ResponseStatus, sendResponse } from "../types/http-response";
 
 /**
  * Admin actions.
@@ -18,7 +19,7 @@ import { JwtPayload, signAccessToken, signRefreshToken } from "../utils/jwt";
 export const createAdmin = asyncHandler(async (req: Request, res: Response) => {
   const adminExists = Boolean(await User.exists({ role: "admin" }));
   if (adminExists && req.user?.role !== "admin") {
-    throw new ApiError(403, "Only an admin can create another admin");
+    throw new ApiError(403, "Only an existing admin can create another admin account.");
   }
 
   const { firstName, lastName, userName, email, password, phoneNumber, dob, bio } =
@@ -26,7 +27,7 @@ export const createAdmin = asyncHandler(async (req: Request, res: Response) => {
 
   const existingUser = await User.findOne({ email });
   if (existingUser) {
-    throw new ApiError(409, "Email is already registered");
+    throw new ApiError(409, "This email address is already registered. Please use a different email address.");
   }
 
   const user = await User.create({
@@ -55,25 +56,25 @@ export const createAdmin = asyncHandler(async (req: Request, res: Response) => {
     await user.save({ validateBeforeSave: false });
     setTokenCookies(res, accessToken, refreshToken);
 
-    res.status(201).json({
-      success: true,
-      message: "Admin account created successfully",
+    sendResponse(res, 201, {
       data: {
         user: toPublicUser(user),
         accessToken,
         refreshToken,
       },
+      status: ResponseStatus.SUCCESS,
+      message: "The admin account has been created and you are now logged in.",
     });
     return;
   }
 
   // A later admin is created by someone who is already logged in, so no new session is issued.
-  res.status(201).json({
-    success: true,
-    message: "Admin account created successfully",
+  sendResponse(res, 201, {
     data: {
       user: toPublicUser(user),
     },
+    status: ResponseStatus.SUCCESS,
+    message: "The admin account has been created successfully.",
   });
 });
 
@@ -82,11 +83,12 @@ export const createAdmin = asyncHandler(async (req: Request, res: Response) => {
 export const getUsers = asyncHandler(async (_req: Request, res: Response) => {
   const users = await User.find().sort({ createdAt: -1 });
 
-  res.status(200).json({
-    success: true,
+  sendResponse(res, 200, {
     data: {
       users: users.map(toPublicUser),
     },
+    status: ResponseStatus.SUCCESS,
+    message: "All users have been retrieved successfully.",
   });
 });
 
@@ -95,14 +97,15 @@ export const getUsers = asyncHandler(async (_req: Request, res: Response) => {
 export const getUser = asyncHandler(async (req: Request, res: Response) => {
   const user = await User.findById(req.params.id);
   if (!user) {
-    throw new ApiError(404, "User not found");
+    throw new ApiError(404, "The requested user could not be found.");
   }
 
-  res.status(200).json({
-    success: true,
+  sendResponse(res, 200, {
     data: {
       user: toPublicUser(user),
     },
+    status: ResponseStatus.SUCCESS,
+    message: "The user has been retrieved successfully.",
   });
 });
 
@@ -112,14 +115,14 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   const { firstName, lastName, userName, phoneNumber, dob, bio, role } = req.body;
   const user = await User.findById(req.params.id);
   if (!user) {
-    throw new ApiError(404, "User not found");
+    throw new ApiError(404, "The requested user could not be found.");
   }
 
   // Keep at least one admin so the project cannot lose every account that can manage it.
   if (role === "user" && user.role === "admin") {
     const adminCount = await User.countDocuments({ role: "admin" });
     if (adminCount <= 1) {
-      throw new ApiError(400, "At least one admin is required");
+      throw new ApiError(400, "At least one admin account must remain.");
     }
   }
 
@@ -135,15 +138,15 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   });
 
   if (!updatedUser) {
-    throw new ApiError(404, "User not found");
+    throw new ApiError(404, "The requested user could not be found.");
   }
 
-  res.status(200).json({
-    success: true,
-    message: "User updated successfully",
+  sendResponse(res, 200, {
     data: {
       user: toPublicUser(updatedUser),
     },
+    status: ResponseStatus.SUCCESS,
+    message: "The user has been updated successfully.",
   });
 });
 
@@ -152,18 +155,18 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
 export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
   const user = await User.findById(req.params.id);
   if (!user) {
-    throw new ApiError(404, "User not found");
+    throw new ApiError(404, "The requested user could not be found.");
   }
 
   // An admin must not lock themselves out by deleting the account they are using.
   if (user._id.toString() === req.user?.userId) {
-    throw new ApiError(400, "You cannot delete your own account");
+    throw new ApiError(400, "You cannot delete the account you are currently signed in with.");
   }
 
   if (user.role === "admin") {
     const adminCount = await User.countDocuments({ role: "admin" });
     if (adminCount <= 1) {
-      throw new ApiError(400, "At least one admin is required");
+      throw new ApiError(400, "At least one admin account must remain.");
     }
   }
 
@@ -171,9 +174,10 @@ export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
   await Feedback.deleteMany({ user: user._id });
   await user.deleteOne();
 
-  res.status(200).json({
-    success: true,
-    message: "User deleted successfully",
+  sendResponse(res, 200, {
+    data: null,
+    status: ResponseStatus.SUCCESS,
+    message: "The user and their feedback have been deleted successfully.",
   });
 });
 
@@ -182,11 +186,12 @@ export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
 export const getAllFeedback = asyncHandler(async (_req: Request, res: Response) => {
   const feedbacks = await Feedback.find().sort({ createdAt: -1 });
 
-  res.status(200).json({
-    success: true,
+  sendResponse(res, 200, {
     data: {
       feedbacks: feedbacks.map(toPublicFeedback),
     },
+    status: ResponseStatus.SUCCESS,
+    message: "All feedback has been retrieved successfully.",
   });
 });
 
@@ -195,14 +200,15 @@ export const getAllFeedback = asyncHandler(async (_req: Request, res: Response) 
 export const getAnyFeedback = asyncHandler(async (req: Request, res: Response) => {
   const feedback = await Feedback.findById(req.params.id);
   if (!feedback) {
-    throw new ApiError(404, "Feedback not found");
+    throw new ApiError(404, "The requested feedback could not be found.");
   }
 
-  res.status(200).json({
-    success: true,
+  sendResponse(res, 200, {
     data: {
       feedback: toPublicFeedback(feedback),
     },
+    status: ResponseStatus.SUCCESS,
+    message: "The feedback has been retrieved successfully.",
   });
 });
 
@@ -211,13 +217,14 @@ export const getAnyFeedback = asyncHandler(async (req: Request, res: Response) =
 export const deleteAnyFeedback = asyncHandler(async (req: Request, res: Response) => {
   const feedback = await Feedback.findById(req.params.id);
   if (!feedback) {
-    throw new ApiError(404, "Feedback not found");
+    throw new ApiError(404, "The requested feedback could not be found.");
   }
 
   await feedback.deleteOne();
 
-  res.status(200).json({
-    success: true,
-    message: "Feedback deleted successfully",
+  sendResponse(res, 200, {
+    data: null,
+    status: ResponseStatus.SUCCESS,
+    message: "The feedback has been deleted successfully.",
   });
 });
