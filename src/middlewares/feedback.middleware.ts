@@ -1,3 +1,9 @@
+/**
+ * Loads one feedback item for the user routes.
+ * The owner may open or delete their own submission.
+ * An admin may open or delete any submission.
+ * The controller then uses req.feedback instead of querying again.
+ */
 import { NextFunction, Request, Response } from "express";
 import Feedback from "../models/feedback.model";
 import { ApiError, asyncHandler } from "../utils/ApiError";

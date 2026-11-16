@@ -1,5 +1,11 @@
+/**
+ * Account input rules.
+ * These run before the auth controller. The same field rules are reused
+ * by the admin update form so a name or phone number is checked once.
+ */
 import { z } from "zod";
 
+// Shared profile rules. Exported so the admin schema can reuse them.
 export const firstNameSchema = z
   .string()
   .trim()
@@ -22,6 +28,7 @@ export const phoneNumberSchema = z
   .string()
   .regex(/^[6-9]\d{9}$/, "Please enter a valid 10-digit phone number");
 
+// Rejects dates that look formatted but are not real, such as 2024-02-31.
 export const dobSchema = z
   .string()
   .trim()
@@ -37,6 +44,7 @@ export const bioSchema = z
   .min(2, "Bio must be at least 2 characters long")
   .max(250, "Bio cannot exceed 250 characters");
 
+// New account. Role is not accepted here, so a caller cannot register as admin.
 export const registerSchema = z.object({
   body: z.object({
     firstName: firstNameSchema,
@@ -53,6 +61,7 @@ export const registerSchema = z.object({
   }),
 });
 
+// Login only needs the two fields used to find and check the account.
 export const loginSchema = z.object({
   body: z.object({
     email: z.string().email("Invalid email address"),
@@ -60,6 +69,7 @@ export const loginSchema = z.object({
   }),
 });
 
+// Partial profile edit. At least one field is required so an empty patch does nothing.
 export const updateProfileSchema = z.object({
   body: z
     .object({
@@ -75,6 +85,7 @@ export const updateProfileSchema = z.object({
     }),
 });
 
+// The current password is required so a stolen access token cannot change the password alone.
 export const changePasswordSchema = z.object({
   body: z.object({
     currentPassword: z.string().min(1, "Current password is required"),
@@ -85,6 +96,7 @@ export const changePasswordSchema = z.object({
   }),
 });
 
+// The refresh token may arrive in the JSON body or in the cookie, so the body field is optional.
 export const refreshTokenSchema = z.object({
   body: z.object({
     refreshToken: z.string().optional(),

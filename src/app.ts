@@ -1,3 +1,9 @@
+/**
+ * Express application.
+ * This file decides the order every request walks through:
+ * security headers, browser access, body reading, routes, then errors.
+ * server.ts starts it. Route files decide what each URL does.
+ */
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -8,25 +14,33 @@ import { errorHandler, notFoundHandler } from "./middlewares/error.middleware";
 
 const app = express();
 
-// Security & Parsing Middlewares
+// Adds safe HTTP headers so browsers reject a few common attacks.
 app.use(helmet());
+
+// The frontend runs on a different origin. CORS lets that origin call this API,
+// and credentials lets the browser send the login cookies.
 app.use(
   cors({
     origin: env.CLIENT_URL,
     credentials: true,
   }),
 );
+
+// Turn JSON and form bodies into req.body. The limit leaves room for large payloads.
 app.use(express.json({ limit: "100mb" }));
-app.use(express.urlencoded({ extended: true,limit:"100mb" }));
+app.use(express.urlencoded({ extended: true, limit: "100mb" }));
+
+// Login stores tokens in cookies. This makes those cookies available on req.cookies.
 app.use(cookieParser());
 
-// Health is available at the server root. API routes stay under /api/v1.
+// Health checks sit outside /api/v1 so a host can probe the process without the API prefix.
 app.get("/", healthCheck);
 app.get("/health", healthCheck);
+
+// Every feature route is mounted here: auth, admin, and feedback.
 app.use("/api/v1", routes);
 
-
-// Error Handling Middlewares
+// These must be last. Unknown URLs and thrown errors become JSON responses.
 app.use(notFoundHandler);
 app.use(errorHandler);
 

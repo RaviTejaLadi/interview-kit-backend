@@ -1,3 +1,8 @@
+/**
+ * Account routes at /api/v1/auth.
+ * Public routes create a session. protect marks routes that need a logged-in user.
+ * validate runs the matching schema before the controller.
+ */
 import { Router } from "express";
 import {
   register,
@@ -20,11 +25,13 @@ import {
 
 const router = Router();
 
+// Open on purpose. A new person has no token yet.
 router.post("/register", validate(registerSchema), register);
 router.post("/login", validate(loginSchema), login);
+// Refresh accepts an existing refresh token, so it is not behind the access-token check.
 router.post("/refresh", validate(refreshTokenSchema), refreshAccessToken);
 
-// Protected routes
+// Everything below needs the access token from login or register.
 router.get("/me", protect, getMe);
 router.patch("/me", protect, validate(updateProfileSchema), updateProfile);
 router.put(

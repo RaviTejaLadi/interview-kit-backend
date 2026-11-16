@@ -1,8 +1,15 @@
+/**
+ * Login checks used by protected routes.
+ * protect proves the caller has a valid account.
+ * authorize limits a route to a role, which is how admin routes stay closed to normal users.
+ * optionalProtect is only for creating the first admin, when a token may not exist yet.
+ */
 import { NextFunction, Request, Response } from "express";
 import { User } from "../models/user.model";
 import { ApiError } from "../utils/ApiError";
 import { verifyAccessToken } from "../utils/jwt";
 
+// Bruno sends Authorization: Bearer. The browser can also send the accessToken cookie.
 const readToken = (req: Request): string | undefined => {
   if (
     req.headers.authorization &&
@@ -26,6 +33,7 @@ export const protect = async (
     }
 
     const decoded = verifyAccessToken(token);
+    // Read the role from the database so a demotion takes effect before the token expires.
     const user = await User.findById(decoded.userId).select("role");
     if (!user) {
       return next(new ApiError(401, "User no longer exists"));
@@ -40,6 +48,7 @@ export const protect = async (
   } catch (error) {
     if (error instanceof ApiError) return next(error);
 
+    // Bad or expired tokens are a client problem. Other failures stay 500.
     const name = error instanceof Error ? error.name : "";
     if (
       name === "JsonWebTokenError" ||
@@ -53,6 +62,7 @@ export const protect = async (
   }
 };
 
+// Continue when no token was sent. A present token is still checked.
 export const optionalProtect = (
   req: Request,
   res: Response,
@@ -62,6 +72,7 @@ export const optionalProtect = (
   return protect(req, res, next);
 };
 
+// Use after protect. Example: authorize("admin") blocks a normal user.
 export const authorize = (...roles: string[]) => {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user || !roles.includes(req.user.role)) {

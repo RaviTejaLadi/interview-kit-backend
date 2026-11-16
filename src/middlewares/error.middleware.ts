@@ -1,3 +1,8 @@
+/**
+ * Last step for failed requests.
+ * notFoundHandler covers URLs this API does not define.
+ * errorHandler turns thrown ApiError values into the JSON shape clients already expect.
+ */
 import { Request, Response, NextFunction } from "express";
 import { ApiError } from "../utils/ApiError";
 import { env } from "../config/env";
@@ -22,6 +27,7 @@ export const errorHandler = (
   res.status(statusCode).json({
     success: false,
     message,
+    // The stack helps local debugging. Production responses leave it out.
     ...(env.NODE_ENV === "development" && { stack: err.stack }),
   });
 };

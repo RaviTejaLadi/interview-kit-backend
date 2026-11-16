@@ -6,6 +6,14 @@ import { User } from "../models/user.model";
 import { ApiError, asyncHandler } from "../utils/ApiError";
 import { JwtPayload, signAccessToken, signRefreshToken } from "../utils/jwt";
 
+/**
+ * Admin actions.
+ * These exist so one trusted account can see and change every user and every feedback item.
+ * Normal registration cannot set role to admin. This controller is the only place that does.
+ */
+
+// Creates an admin. The first one can be created with no login.
+// After that, only an existing admin can create another, so the route cannot stay open.
 // POST /api/v1/admin/register
 export const createAdmin = asyncHandler(async (req: Request, res: Response) => {
   const adminExists = Boolean(await User.exists({ role: "admin" }));
@@ -33,6 +41,7 @@ export const createAdmin = asyncHandler(async (req: Request, res: Response) => {
     role: "admin",
   });
 
+  // The first admin has nobody to log them in, so this response includes a session.
   if (!adminExists) {
     const payload: JwtPayload = {
       userId: user._id.toString(),
@@ -58,6 +67,7 @@ export const createAdmin = asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
+  // A later admin is created by someone who is already logged in, so no new session is issued.
   res.status(201).json({
     success: true,
     message: "Admin account created successfully",
@@ -67,6 +77,7 @@ export const createAdmin = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+// The full account list. Passwords stay hidden because toPublicUser omits them.
 // GET /api/v1/admin/users
 export const getUsers = asyncHandler(async (_req: Request, res: Response) => {
   const users = await User.find().sort({ createdAt: -1 });
@@ -79,6 +90,7 @@ export const getUsers = asyncHandler(async (_req: Request, res: Response) => {
   });
 });
 
+// One account by id, including accounts the admin does not own.
 // GET /api/v1/admin/users/:id
 export const getUser = asyncHandler(async (req: Request, res: Response) => {
   const user = await User.findById(req.params.id);
@@ -94,6 +106,7 @@ export const getUser = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+// Changes any profile field and can promote or demote a role.
 // PATCH /api/v1/admin/users/:id
 export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   const { firstName, lastName, userName, phoneNumber, dob, bio, role } = req.body;
@@ -102,6 +115,7 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "User not found");
   }
 
+  // Keep at least one admin so the project cannot lose every account that can manage it.
   if (role === "user" && user.role === "admin") {
     const adminCount = await User.countDocuments({ role: "admin" });
     if (adminCount <= 1) {
@@ -133,6 +147,7 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+// Removes another account and the feedback that belongs to it.
 // DELETE /api/v1/admin/users/:id
 export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
   const user = await User.findById(req.params.id);
@@ -140,6 +155,7 @@ export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
     throw new ApiError(404, "User not found");
   }
 
+  // An admin must not lock themselves out by deleting the account they are using.
   if (user._id.toString() === req.user?.userId) {
     throw new ApiError(400, "You cannot delete your own account");
   }
@@ -151,6 +167,7 @@ export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
+  // Feedback stores a user id. Delete those notes so they do not point at a missing account.
   await Feedback.deleteMany({ user: user._id });
   await user.deleteOne();
 
@@ -160,6 +177,7 @@ export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+// Every feedback submission, not only the ones this admin wrote.
 // GET /api/v1/admin/feedback
 export const getAllFeedback = asyncHandler(async (_req: Request, res: Response) => {
   const feedbacks = await Feedback.find().sort({ createdAt: -1 });
@@ -172,6 +190,7 @@ export const getAllFeedback = asyncHandler(async (_req: Request, res: Response) 
   });
 });
 
+// Reads one submission without the owner check used by the user feedback route.
 // GET /api/v1/admin/feedback/:id
 export const getAnyFeedback = asyncHandler(async (req: Request, res: Response) => {
   const feedback = await Feedback.findById(req.params.id);
@@ -187,6 +206,7 @@ export const getAnyFeedback = asyncHandler(async (req: Request, res: Response) =
   });
 });
 
+// Removes any submission, including one written by another user.
 // DELETE /api/v1/admin/feedback/:id
 export const deleteAnyFeedback = asyncHandler(async (req: Request, res: Response) => {
   const feedback = await Feedback.findById(req.params.id);

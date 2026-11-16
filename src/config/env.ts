@@ -1,3 +1,8 @@
+/**
+ * Environment settings.
+ * Secrets and URLs stay out of the source code. The rest of the project
+ * reads this `env` object so every file uses the same checked values.
+ */
 import dotenv from "dotenv";
 import path from "path";
 
@@ -9,6 +14,7 @@ const isProduction = nodeEnv === "production";
 dotenv.config({ path: path.resolve(process.cwd(), `.env.${nodeEnv}`) });
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
+// Known sample secrets. Production must not boot with one of these.
 const PLACEHOLDER_SECRETS = new Set([
   "your_super_secret_access_key_change_in_production",
   "your_super_secret_refresh_key_change_in_production",
@@ -18,11 +24,13 @@ const PLACEHOLDER_SECRETS = new Set([
   "secret",
 ]);
 
+// Trim quotes that sometimes get copied into env dashboards.
 const readEnv = (name: string): string | undefined => {
   const value = process.env[name]?.trim().replace(/^["']|["']$/g, "");
   return value || undefined;
 };
 
+// Production fails closed when a setting is missing. Local development can use a fallback.
 const required = (name: string, fallback?: string): string => {
   const value = readEnv(name);
   if (value) return value;
@@ -32,6 +40,7 @@ const required = (name: string, fallback?: string): string => {
   );
 };
 
+// A short or copied JWT secret would let someone forge login tokens in production.
 const assertJwtSecret = (name: string, value: string): string => {
   if (!isProduction) return value;
   if (value.length < 32 || PLACEHOLDER_SECRETS.has(value)) {
@@ -45,6 +54,7 @@ const assertJwtSecret = (name: string, value: string): string => {
 const mongoUri = (): string => {
   const uri = readEnv("MONGO_URI") || readEnv("MONGODB_URI");
   if (!uri) {
+    // Local machines can use a database on this computer. Render cannot.
     if (!isProduction) return "mongodb://127.0.0.1:27017/interview-kit";
     throw new Error(
       "MONGO_URI is required in production. Set your MongoDB Atlas connection string in Render. Localhost is not available there."
@@ -67,6 +77,7 @@ const jwtRefreshSecret = assertJwtSecret(
   required("JWT_REFRESH_SECRET", "dev_refresh_secret_key_67890")
 );
 
+// Separate secrets mean a stolen access-token key cannot also mint refresh tokens.
 if (isProduction && jwtAccessSecret === jwtRefreshSecret) {
   throw new Error("JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different.");
 }
@@ -74,13 +85,16 @@ if (isProduction && jwtAccessSecret === jwtRefreshSecret) {
 export const env = {
   NODE_ENV: nodeEnv,
   isProduction,
+  // Render provides PORT. Local Bruno calls port 5000.
   PORT: parseInt(readEnv("PORT") || (isProduction ? "10000" : "5000"), 10),
   MONGO_URI: mongoUri(),
+  // The browser origin allowed to call this API with cookies.
   CLIENT_URL: isProduction
     ? required("CLIENT_URL")
     : readEnv("CLIENT_URL") || "http://localhost:5173",
   JWT_ACCESS_SECRET: jwtAccessSecret,
   JWT_REFRESH_SECRET: jwtRefreshSecret,
+  // Access tokens expire sooner. Refresh tokens let a client stay logged in.
   JWT_ACCESS_EXPIRES_IN: readEnv("JWT_ACCESS_EXPIRES_IN") || "24h",
   JWT_REFRESH_EXPIRES_IN: readEnv("JWT_REFRESH_EXPIRES_IN") || "7d",
 };
