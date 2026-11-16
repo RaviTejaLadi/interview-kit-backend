@@ -1,30 +1,65 @@
-import { Request, Response, NextFunction } from "express";
+import { NextFunction, Request, Response } from "express";
+import { User } from "../models/user.model";
 import { ApiError } from "../utils/ApiError";
 import { verifyAccessToken } from "../utils/jwt";
 
-export const protect = (req: Request, _res: Response, next: NextFunction) => {
+const readToken = (req: Request): string | undefined => {
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer ")
+  ) {
+    return req.headers.authorization.split(" ")[1];
+  }
+
+  return req.cookies?.accessToken;
+};
+
+export const protect = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
   try {
-    let token: string | undefined;
-
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer ")
-    ) {
-      token = req.headers.authorization.split(" ")[1];
-    } else if (req.cookies?.accessToken) {
-      token = req.cookies.accessToken;
-    }
-
+    const token = readToken(req);
     if (!token) {
       return next(new ApiError(401, "Authentication required. Please log in."));
     }
 
     const decoded = verifyAccessToken(token);
-    req.user = decoded;
+    const user = await User.findById(decoded.userId).select("role");
+    if (!user) {
+      return next(new ApiError(401, "User no longer exists"));
+    }
+
+    req.user = {
+      userId: decoded.userId,
+      email: decoded.email,
+      role: user.role,
+    };
     next();
   } catch (error) {
-    return next(new ApiError(401, "Invalid or expired access token"));
+    if (error instanceof ApiError) return next(error);
+
+    const name = error instanceof Error ? error.name : "";
+    if (
+      name === "JsonWebTokenError" ||
+      name === "TokenExpiredError" ||
+      name === "NotBeforeError"
+    ) {
+      return next(new ApiError(401, "Invalid or expired access token"));
+    }
+
+    next(error);
   }
+};
+
+export const optionalProtect = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!readToken(req)) return next();
+  return protect(req, res, next);
 };
 
 export const authorize = (...roles: string[]) => {

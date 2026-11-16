@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import adminRoutes from "./admin.routes";
 import authRoutes from "./auth.routes";
 import feedbackRoutes from "./feedback.routes";
 import { env } from "../config/env";
@@ -17,6 +18,7 @@ export const healthCheck = (_req: Request, res: Response) => {
 router.get("/health", healthCheck);
 
 router.use("/auth", authRoutes);
+router.use("/admin", adminRoutes);
 router.use("/feedback", feedbackRoutes);
 
 export default router;

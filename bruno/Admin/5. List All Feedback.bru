@@ -1,0 +1,15 @@
+meta {
+  name: 5. List All Feedback
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/admin/feedback
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

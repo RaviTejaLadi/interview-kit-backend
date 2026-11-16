@@ -1,0 +1,15 @@
+meta {
+  name: 6. Get Any Feedback
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/admin/feedback/{{feedbackId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

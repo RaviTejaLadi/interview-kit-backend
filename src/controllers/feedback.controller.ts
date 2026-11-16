@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import Feedback, { IFeedback } from "../models/feedback.model";
 import { ApiError, asyncHandler } from "../utils/ApiError";
 
-const toPublicFeedback = (feedback: IFeedback) => ({
+export const toPublicFeedback = (feedback: IFeedback) => ({
   id: feedback._id,
   user: feedback.user,
   title: feedback.title,

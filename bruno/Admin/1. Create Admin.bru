@@ -1,0 +1,42 @@
+meta {
+  name: 1. Create Admin
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/admin/register
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "firstName": "Admin",
+    "lastName": "User",
+    "userName": "adminuser",
+    "email": "admin@example.com",
+    "password": "Password@123",
+    "phoneNumber": "9876543212",
+    "dob": "1995-01-15",
+    "bio": "Platform administrator"
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body && res.body.data && res.body.data.user) {
+    bru.setEnvVar("userId", res.body.data.user.id);
+    if (res.body.data.accessToken) {
+      bru.setEnvVar("accessToken", res.body.data.accessToken);
+      bru.setEnvVar("refreshToken", res.body.data.refreshToken);
+    }
+  }
+}

@@ -1,28 +1,28 @@
 import { z } from "zod";
 
-const firstNameSchema = z
+export const firstNameSchema = z
   .string()
   .trim()
   .min(3, "First Name must be at least 3 characters")
   .max(60, "First Name cannot exceed 60 characters");
 
-const lastNameSchema = z
+export const lastNameSchema = z
   .string()
   .trim()
   .min(3, "Last Name must be at least 3 characters")
   .max(60, "Last Name cannot exceed 60 characters");
 
-const userNameSchema = z
+export const userNameSchema = z
   .string()
   .trim()
   .min(2, "Username must be at least 2 characters")
   .max(60, "Username cannot exceed 60 characters");
 
-const phoneNumberSchema = z
+export const phoneNumberSchema = z
   .string()
   .regex(/^[6-9]\d{9}$/, "Please enter a valid 10-digit phone number");
 
-const dobSchema = z
+export const dobSchema = z
   .string()
   .trim()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Date of birth must be in YYYY-MM-DD format")
@@ -31,7 +31,7 @@ const dobSchema = z
     return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
   }, "Please enter a valid date of birth");
 
-const bioSchema = z
+export const bioSchema = z
   .string()
   .trim()
   .min(2, "Bio must be at least 2 characters long")

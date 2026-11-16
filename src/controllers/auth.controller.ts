@@ -9,7 +9,7 @@ import {
 } from "../utils/jwt";
 import { env } from "../config/env";
 
-const toPublicUser = (user: IUser) => ({
+export const toPublicUser = (user: IUser) => ({
   id: user._id,
   firstName: user.firstName,
   lastName: user.lastName,
@@ -23,7 +23,7 @@ const toPublicUser = (user: IUser) => ({
   updatedAt: user.updatedAt,
 });
 
-const setTokenCookies = (
+export const setTokenCookies = (
   res: Response,
   accessToken: string,
   refreshToken: string
