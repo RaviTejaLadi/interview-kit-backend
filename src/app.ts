@@ -14,6 +14,9 @@ import { errorHandler, notFoundHandler } from "./middlewares/error.middleware";
 
 const app = express();
 
+const isLocalDevHost = (hostname: string): boolean =>
+  hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+
 const isAllowedCorsOrigin = (origin?: string): boolean => {
   // Non-browser calls (Bruno, curl, server-to-server) usually send no Origin header.
   if (!origin) return true;
@@ -26,10 +29,9 @@ const isAllowedCorsOrigin = (origin?: string): boolean => {
     // CORS breakage after every new frontend deployment URL.
     if (protocol === "https:" && hostname.endsWith(".vercel.app")) return true;
 
-    if (
-      !env.isProduction &&
-      (hostname === "localhost" || hostname === "127.0.0.1")
-    ) {
+    // The local Vite app calls the deployed API directly. Allow that host in
+    // every environment so localhost does not fail the browser preflight.
+    if ((protocol === "http:" || protocol === "https:") && isLocalDevHost(hostname)) {
       return true;
     }
   } catch {
@@ -41,11 +43,8 @@ const isAllowedCorsOrigin = (origin?: string): boolean => {
 
 const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
-    if (isAllowedCorsOrigin(origin)) {
-      callback(null, true);
-      return;
-    }
-    callback(new Error("This origin is not allowed by CORS."));
+    // A rejected origin must not throw. The error handler would turn that into HTTP 500.
+    callback(null, isAllowedCorsOrigin(origin));
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   credentials: true,
