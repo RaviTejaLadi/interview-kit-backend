@@ -15,13 +15,20 @@ import { errorHandler, notFoundHandler } from "./middlewares/error.middleware";
 const app = express();
 
 // Adds safe HTTP headers so browsers reject a few common attacks.
-app.use(helmet());
+// The default resource policy is same-origin, which would block the Vercel app from reading this API.
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
 
-// The frontend runs on a different origin. CORS lets that origin call this API,
+// The frontend runs on a different origin. CORS lets those origins call this API,
 // and credentials lets the browser send the login cookies.
 app.use(
   cors({
-    origin: env.CLIENT_URL,
+    origin: env.CLIENT_ORIGINS,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   }),
 );

@@ -82,6 +82,26 @@ if (isProduction && jwtAccessSecret === jwtRefreshSecret) {
   throw new Error("JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different.");
 }
 
+// The live frontend. A copied placeholder must not be the only origin the browser is allowed to use.
+const PRODUCTION_CLIENT_URL = "https://my-interview-kit.vercel.app";
+const PLACEHOLDER_CLIENT_URLS = new Set([
+  "https://my-interview-kit.vercel.app/",
+]);
+
+const readClientOrigins = (): string[] => {
+  const configured = (readEnv("CLIENT_URL") || "")
+    .split(",")
+    .map((origin) => origin.trim().replace(/\/$/, ""))
+    .filter((origin) => origin && !PLACEHOLDER_CLIENT_URLS.has(origin));
+
+  const origins = new Set<string>(configured);
+  if (!isProduction) origins.add("http://localhost:1010");
+  origins.add(PRODUCTION_CLIENT_URL);
+  return [...origins];
+};
+
+const clientOrigins = readClientOrigins();
+
 // Chat quotas are numbers. A missing or unusable value keeps the built-in default.
 const readInt = (name: string, fallback: number, min: number, max: number): number => {
   const raw = readEnv(name);
@@ -96,10 +116,10 @@ export const env = {
   // Render provides PORT. Local Bruno calls port 5000.
   PORT: parseInt(readEnv("PORT") || (isProduction ? "10000" : "5000"), 10),
   MONGO_URI: mongoUri(),
-  // The browser origin allowed to call this API with cookies.
-  CLIENT_URL: isProduction
-    ? required("CLIENT_URL")
-    : readEnv("CLIENT_URL") || "http://localhost:5173",
+  // Shown on the health check. The first real origin, or the deployed frontend.
+  CLIENT_URL: clientOrigins[0] || PRODUCTION_CLIENT_URL,
+  // Every origin a browser may call this API from. CLIENT_URL may list several, separated by commas.
+  CLIENT_ORIGINS: clientOrigins,
   JWT_ACCESS_SECRET: jwtAccessSecret,
   JWT_REFRESH_SECRET: jwtRefreshSecret,
   // Access tokens expire sooner. Refresh tokens let a client stay logged in.

@@ -42,14 +42,15 @@ export const setTokenCookies = (
   res.cookie("accessToken", accessToken, {
     httpOnly: true, // JavaScript on the page cannot read the token.
     secure: isProd, // Production sends the cookie only over HTTPS.
-    sameSite: isProd ? "strict" : "lax", // Limits when the browser attaches the cookie.
+    // The site and this API are different hosts. Strict cookies are not sent on that cross-site login.
+    sameSite: isProd ? "none" : "lax",
     maxAge: 15 * 60 * 1000, // 15 minutes
   });
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "strict" : "lax",
+    sameSite: isProd ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days, matching the longer refresh lifetime.
   });
 };
