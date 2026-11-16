@@ -1,7 +1,8 @@
 {
-  "name": "express-mongo-ts-auth",
+  "name": "interview-kit-backend",
   "version": "1.0.0",
-  "description": "Production-ready Node.js, Express, TypeScript & MongoDB backend with custom JWT authentication and Bruno collection",
+  "description": "API for the Interview Kit website: accounts, sessions, admin management, and feedback.",
+  "license": "MIT",
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon",
