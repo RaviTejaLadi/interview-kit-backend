@@ -30,7 +30,7 @@ router.get("/health", healthCheck);
 
 // Accounts: register, login, profile, password, refresh, logout.
 router.use("/auth", authRoutes);
-// Full access: create an admin, then manage every user and every feedback item.
+// Full access: create an admin, then manage every user and resolve feedback status.
 router.use("/admin", adminRoutes);
 // The feedback form: submit, list, read, and delete.
 router.use("/feedback", feedbackRoutes);

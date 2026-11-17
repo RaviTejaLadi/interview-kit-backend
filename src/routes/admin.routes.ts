@@ -12,6 +12,7 @@ import {
   getAnyFeedback,
   getUser,
   getUsers,
+  updateAnyFeedback,
   updateUser,
 } from "../controllers/admin.controller";
 import { authorize, optionalProtect, protect } from "../middlewares/auth.middleware";
@@ -21,7 +22,10 @@ import {
   adminUserIdSchema,
   createAdminSchema,
 } from "../schemas/admin.schema";
-import { feedbackIdSchema } from "../schemas/feedback.schema";
+import {
+  adminUpdateFeedbackSchema,
+  feedbackIdSchema,
+} from "../schemas/feedback.schema";
 
 const router = Router();
 
@@ -40,6 +44,7 @@ router.delete("/users/:id", validate(adminUserIdSchema), deleteUser);
 // Full feedback directory, including items the admin did not write.
 router.get("/feedback", getAllFeedback);
 router.get("/feedback/:id", validate(feedbackIdSchema), getAnyFeedback);
+router.patch("/feedback/:id", validate(adminUpdateFeedbackSchema), updateAnyFeedback);
 router.delete("/feedback/:id", validate(feedbackIdSchema), deleteAnyFeedback);
 
 export default router;

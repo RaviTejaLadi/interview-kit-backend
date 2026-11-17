@@ -1,11 +1,11 @@
 meta {
-  name: 8. Delete User
+  name: 8. Delete Any Feedback
   type: http
   seq: 8
 }
 
 delete {
-  url: {{baseUrl}}/admin/users/{{userId}}
+  url: {{baseUrl}}/admin/feedback/{{feedbackId}}
   body: none
   auth: bearer
 }

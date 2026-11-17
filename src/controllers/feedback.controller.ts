@@ -15,6 +15,8 @@ export const toPublicFeedback = (feedback: IFeedback) => ({
   user: feedback.user,
   title: feedback.title,
   description: feedback.description ?? null,
+  // Older documents may not have status yet; treat those as still open.
+  status: feedback.status ?? "open",
   createdAt: feedback.createdAt,
   updatedAt: feedback.updatedAt,
 });

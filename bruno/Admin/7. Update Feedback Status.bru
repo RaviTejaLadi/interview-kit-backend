@@ -1,0 +1,25 @@
+meta {
+  name: 7. Update Feedback Status
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/admin/feedback/{{feedbackId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "status": "resolved"
+  }
+}

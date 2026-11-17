@@ -1,8 +1,10 @@
 /**
  * Feedback form rules.
  * Checked before a submission is saved, and before an id is used to load one item.
+ * Admins may also update moderation status on any item.
  */
 import { z } from "zod";
+import { FEEDBACK_STATUSES } from "../models/feedback.model";
 
 // The short subject of the form.
 const titleSchema = z
@@ -45,5 +47,17 @@ export const feedbackIdSchema = z.object({
         invalid_type_error: "Feedback id must be text.",
       })
       .regex(/^[a-fA-F0-9]{24}$/, "Please provide a valid feedback id."),
+  }),
+});
+
+// Admin-only status change for feedback moderation.
+export const adminUpdateFeedbackSchema = z.object({
+  params: feedbackIdSchema.shape.params,
+  body: z.object({
+    status: z.enum(FEEDBACK_STATUSES, {
+      errorMap: () => ({
+        message: "Status must be open, in_progress, or resolved.",
+      }),
+    }),
   }),
 });

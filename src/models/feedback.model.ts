@@ -2,13 +2,18 @@
  * Feedback submissions.
  * A logged-in user sends a title and description. The user id records who wrote it,
  * so a person can see their own items and an admin can see every item.
+ * Admins can move status between open, in_progress, and resolved.
  */
 import mongoose, { Document, Schema } from "mongoose";
+
+export const FEEDBACK_STATUSES = ["open", "in_progress", "resolved"] as const;
+export type FeedbackStatus = (typeof FEEDBACK_STATUSES)[number];
 
 export interface IFeedback extends Document {
   user: mongoose.Types.ObjectId;
   title: string;
   description?: string;
+  status: FeedbackStatus;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +49,17 @@ const feedbackSchema = new Schema<IFeedback>(
         },
         message: "Description must be at least 2 characters",
       },
+    },
+
+    // Moderation state. New submissions start open until an admin updates them.
+    status: {
+      type: String,
+      enum: {
+        values: FEEDBACK_STATUSES,
+        message: "Status must be open, in_progress, or resolved.",
+      },
+      default: "open",
+      index: true,
     },
   },
   {

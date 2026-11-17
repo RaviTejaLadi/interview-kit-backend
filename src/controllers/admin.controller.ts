@@ -212,6 +212,26 @@ export const getAnyFeedback = asyncHandler(async (req: Request, res: Response) =
   });
 });
 
+// Updates moderation status on any submission (open, in_progress, or resolved).
+// PATCH /api/v1/admin/feedback/:id
+export const updateAnyFeedback = asyncHandler(async (req: Request, res: Response) => {
+  const feedback = await Feedback.findById(req.params.id);
+  if (!feedback) {
+    throw new ApiError(404, "The requested feedback could not be found.");
+  }
+
+  feedback.status = req.body.status;
+  await feedback.save();
+
+  sendResponse(res, 200, {
+    data: {
+      feedback: toPublicFeedback(feedback),
+    },
+    status: ResponseStatus.SUCCESS,
+    message: "The feedback status has been updated successfully.",
+  });
+});
+
 // Removes any submission, including one written by another user.
 // DELETE /api/v1/admin/feedback/:id
 export const deleteAnyFeedback = asyncHandler(async (req: Request, res: Response) => {
