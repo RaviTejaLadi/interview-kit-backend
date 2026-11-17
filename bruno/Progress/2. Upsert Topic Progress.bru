@@ -1,0 +1,27 @@
+meta {
+  name: 2. Upsert Topic Progress
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/progress/topics
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "id": "javascript-interview-kit/01-theory/01-basics/01-what-is-javascript.md",
+    "completed": true,
+    "important": false
+  }
+}

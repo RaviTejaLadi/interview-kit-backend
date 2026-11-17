@@ -1,0 +1,29 @@
+meta {
+  name: 3. Batch Topic Progress
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/progress/topics/batch
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "ids": [
+      "javascript-interview-kit/01-theory/01-basics/01-what-is-javascript.md",
+      "javascript-interview-kit/01-theory/01-basics/02-javascript-engines.md"
+    ],
+    "completed": true
+  }
+}

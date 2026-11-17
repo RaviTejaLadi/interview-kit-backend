@@ -1,0 +1,36 @@
+meta {
+  name: 5. Sync Progress
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/progress/sync
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "topics": {
+      "javascript-interview-kit/01-theory/01-basics/01-what-is-javascript.md": {
+        "completed": true,
+        "important": true
+      }
+    },
+    "guides": {
+      "progressive-web-app-strategies": {
+        "read": true,
+        "starred": false
+      }
+    }
+  }
+}

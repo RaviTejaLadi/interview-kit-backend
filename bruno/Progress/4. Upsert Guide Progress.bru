@@ -1,0 +1,27 @@
+meta {
+  name: 4. Upsert Guide Progress
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/progress/guides
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "id": "progressive-web-app-strategies",
+    "read": true,
+    "starred": true
+  }
+}
