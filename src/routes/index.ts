@@ -8,6 +8,7 @@ import adminRoutes from "./admin.routes";
 import authRoutes from "./auth.routes";
 import chatRoutes from "./chat.routes";
 import feedbackRoutes from "./feedback.routes";
+import blogRoutes from "./blog.routes";
 import progressRoutes from "./progress.routes";
 import { env } from "../config/env";
 import { ResponseStatus, sendResponse } from "../types/http-response";
@@ -38,5 +39,7 @@ router.use("/feedback", feedbackRoutes);
 router.use("/chat", chatRoutes);
 // Topic completed/important and guide read/starred maps for the signed-in user.
 router.use("/progress", progressRoutes);
+// Blogs: public list/read, authenticated create, admin update/delete.
+router.use("/blogs", blogRoutes);
 
 export default router;

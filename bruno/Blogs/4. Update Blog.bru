@@ -1,0 +1,46 @@
+meta {
+  name: 4. Update Blog
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/blogs/{{blogId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "System Design Basics Updated",
+    "description": "Updated overview of load balancing, caching, and database trade-offs for interviews.",
+    "date": "2026-11-21T10:00:00.000Z",
+    "readTime": "10 min",
+    "content": "## Introduction\n\nUpdated system design notes for interviews.",
+    "slug": "system-design-basics-updated",
+    "status": "published",
+    "coverImageUrl": "https://example.com/cover.png",
+    "tags": ["system-design", "interview", "caching"],
+    "categoryId": "system-design",
+    "seoTitle": "System Design Basics Updated",
+    "seoDescription": "Updated load balancing, caching, and database choices for interview prep.",
+    "views": 12,
+    "likes": 3,
+    "publishedAt": "2026-11-21T10:00:00.000Z"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 && res.body && res.body.data && res.body.data.blog) {
+    bru.setEnvVar("blogId", res.body.data.blog.id);
+    bru.setEnvVar("blogSlug", res.body.data.blog.slug);
+  }
+}

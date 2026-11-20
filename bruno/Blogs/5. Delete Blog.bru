@@ -1,0 +1,22 @@
+meta {
+  name: 5. Delete Blog
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/blogs/{{blogId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    bru.setEnvVar("blogId", "");
+    bru.setEnvVar("blogSlug", "");
+  }
+}

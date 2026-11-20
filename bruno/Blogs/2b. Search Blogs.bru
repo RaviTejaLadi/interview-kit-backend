@@ -1,0 +1,11 @@
+meta {
+  name: 2b. Search Blogs
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/blogs?page=1&limit=10&search=caching&status=published
+  body: none
+  auth: none
+}

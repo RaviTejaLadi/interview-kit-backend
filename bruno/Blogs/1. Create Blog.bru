@@ -1,0 +1,40 @@
+meta {
+  name: 1. Create Blog
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/blogs
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "System Design Basics",
+    "description": "A practical overview of load balancing, caching, and database trade-offs for interviews.",
+    "date": "2026-11-20T10:00:00.000Z",
+    "readTime": "8 min",
+    "content": "## Introduction\n\nSystem design interviews reward clear trade-offs.\n\n## Load Balancing\n\nDistribute traffic across healthy instances.\n\n## Caching\n\nUse Redis for hot reads and keep TTLs intentional.",
+    "status": "published",
+    "tags": ["system-design", "interview"],
+    "seoTitle": "System Design Basics for Interviews",
+    "seoDescription": "Load balancing, caching, and database choices explained for interview prep."
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body && res.body.data && res.body.data.blog) {
+    bru.setEnvVar("blogId", res.body.data.blog.id);
+    bru.setEnvVar("blogSlug", res.body.data.blog.slug);
+  }
+}
